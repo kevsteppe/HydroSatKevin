@@ -29,7 +29,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: backend/
-      Handler: src/handlers/postFeedback.handler
+      Handler: dist/handlers/feedback.postFeedback
       Events:
         PostFeedback:
           Type: Api
@@ -52,7 +52,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: backend/
-      Handler: src/handlers/getFeedback.handler
+      Handler: dist/handlers/viewFeedback.getViewFeedback
       Events:
         GetFeedback:
           Type: Api

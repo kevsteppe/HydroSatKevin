@@ -60,11 +60,15 @@ HydroSatKevin is a customer feedback system with sentiment analysis using AWS Co
 - [ ] Write Cypress tests for complete user workflows
 
 **Infrastructure & Deployment:**
-- [ ] Configure DynamoDB tables (feedback + statistics) with proper indexes
-- [ ] Set up IAM roles and permissions for Lambda and Comprehend
-- [ ] Configure CORS for frontend-backend communication
-- [ ] Deploy backend to AWS Lambda
-- [ ] Deploy frontend to S3 static hosting
+- [x] Configure DynamoDB tables (feedback + statistics) with proper indexes
+- [x] Set up IAM roles and permissions for Lambda and Comprehend
+- [x] Configure CORS for frontend-backend communication
+- [x] Create GitHub Actions CI/CD pipeline for AWS deployment
+- [ ] Set up GitHub repository secrets for AWS credentials
+- [ ] Create SAM deployment S3 bucket
+- [ ] Deploy backend to AWS Lambda via CI/CD
+- [ ] Deploy frontend to S3 static hosting via CI/CD
+- [ ] Fix SAM template endpoint names - separate POST /feedback and GET /viewFeedback
 - [ ] Set up environment variables and configuration
 
 ## Development Commands

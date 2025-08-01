@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "test": "jest",
-    "local": "sam local start-api",
+    "local": "cd .. && sam local start-api",
     "deploy": "sam build && sam deploy",
     "deploy-guided": "sam build && sam deploy --guided",
     "lint": "eslint src/**/*.ts",

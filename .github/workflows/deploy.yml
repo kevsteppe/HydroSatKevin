@@ -1,0 +1,122 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: |
+          backend/package-lock.json
+          frontend/package-lock.json
+    
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        npm ci
+    
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm ci
+    
+    - name: Run backend tests
+      run: |
+        cd backend
+        npm test
+    
+    - name: Run frontend tests
+      run: |
+        cd frontend
+        npm test -- --run
+    
+    - name: Build backend
+      run: |
+        cd backend
+        npm run build
+    
+    - name: Build frontend
+      run: |
+        cd frontend
+        npm run build
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Setup SAM CLI
+      uses: aws-actions/setup-sam@v2
+      with:
+        use-installer: true
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+    
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        npm ci
+    
+    - name: Build backend
+      run: |
+        cd backend
+        npm run build
+    
+    - name: Deploy SAM application
+      run: |
+        sam build
+        sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --stack-name hydrosatkevin-prod --s3-bucket ${{ secrets.SAM_DEPLOYMENT_BUCKET }} --capabilities CAPABILITY_IAM --region ${{ secrets.AWS_REGION }}
+    
+    - name: Build frontend
+      run: |
+        cd frontend
+        npm ci
+        npm run build
+    
+    - name: Get S3 bucket name from CloudFormation
+      id: get-bucket
+      run: |
+        BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name hydrosatkevin-prod --query 'Stacks[0].Outputs[?OutputKey==`FrontendBucket`].OutputValue' --output text --region ${{ secrets.AWS_REGION }})
+        echo "bucket-name=$BUCKET_NAME" >> $GITHUB_OUTPUT
+    
+    - name: Deploy frontend to S3
+      run: |
+        aws s3 sync frontend/dist/ s3://${{ steps.get-bucket.outputs.bucket-name }}/ --delete
+    
+    - name: Get API Gateway URL
+      id: get-api-url
+      run: |
+        API_URL=$(aws cloudformation describe-stacks --stack-name hydrosatkevin-prod --query 'Stacks[0].Outputs[?OutputKey==`FeedbackApi`].OutputValue' --output text --region ${{ secrets.AWS_REGION }})
+        echo "api-url=$API_URL" >> $GITHUB_OUTPUT
+        echo "Deployed API URL: $API_URL"
+        echo "Frontend URL: http://${{ steps.get-bucket.outputs.bucket-name }}.s3-website-${{ secrets.AWS_REGION }}.amazonaws.com"

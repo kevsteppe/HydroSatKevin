@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { generateSessionKey } from '../utils/session';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://your-api-gateway-url.com/Prod';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 interface FeedbackFormProps {
   onSuccess?: () => void;
