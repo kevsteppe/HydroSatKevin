@@ -104,7 +104,6 @@ Resources:
   FrontendBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub '${AWS::StackName}-frontend-${AWS::AccountId}'
       WebsiteConfiguration:
         IndexDocument: giveFeedback.html
         ErrorDocument: error.html
@@ -124,7 +123,7 @@ Resources:
             Effect: Allow
             Principal: '*'
             Action: 's3:GetObject'
-            Resource: !Sub '${FrontendBucket}/*'
+            Resource: !Sub '${FrontendBucket.Arn}/*'
 
 Outputs:
   FeedbackApi:
