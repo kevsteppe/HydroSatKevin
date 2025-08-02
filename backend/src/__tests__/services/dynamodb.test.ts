@@ -1,44 +1,40 @@
-import { 
-  saveFeedback, 
-  getAllFeedback, 
-  checkIdempotency, 
-  updateStatistics, 
-  getStatistics 
-} from '../../services/dynamodb';
 import { FeedbackRecord } from '../../types/feedback';
 
-// Mock AWS SDK
+// Reusable DynamoDB mock approach - define everything in factory
+const mockSend = jest.fn();
+
 jest.mock('@aws-sdk/client-dynamodb', () => ({
-  DynamoDBClient: jest.fn().mockImplementation(() => ({})),
+  DynamoDBClient: jest.fn(),
 }));
 
-const mockSendForTests = jest.fn();
-
-jest.mock('@aws-sdk/lib-dynamodb', () => {
-  const mockSendForTests = jest.fn();
-  return {
-    DynamoDBDocumentClient: {
-      from: jest.fn(() => ({
-        send: mockSendForTests,
-      })),
-    },
-    PutCommand: jest.fn(),
-    GetCommand: jest.fn(),
-    QueryCommand: jest.fn(),
-    UpdateCommand: jest.fn(),
-    ScanCommand: jest.fn(),
-  };
-});
-
-// Get reference to the mock function for test control
-const { DynamoDBDocumentClient } = jest.requireMock('@aws-sdk/lib-dynamodb');
-const mockDocClient = DynamoDBDocumentClient.from();
-const mockSendForTestsForTests = mockDocClient.send;
+jest.mock('@aws-sdk/lib-dynamodb', () => ({
+  DynamoDBDocumentClient: {
+    from: jest.fn(() => ({
+      send: mockSend
+    }))
+  },
+  PutCommand: jest.fn(),
+  QueryCommand: jest.fn(),
+  UpdateCommand: jest.fn(),
+  ScanCommand: jest.fn(),
+  GetCommand: jest.fn()
+}));
 
 describe('DynamoDB service', () => {
-  beforeEach(() => {
-    mockSendForTestsForTests.mockClear();
+  // Import dynamodb module inside each test to ensure fresh mocks
+  let dynamoService: typeof import('../../services/dynamodb');
+
+  beforeEach(async () => {
+    mockSend.mockClear();
     jest.clearAllMocks();
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    
+    // Fresh import of the module for each test
+    dynamoService = await import('../../services/dynamodb');
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   describe('saveFeedback', () => {
@@ -53,9 +49,9 @@ describe('DynamoDB service', () => {
       };
 
       // Mock DynamoDB error
-      mockSendForTestsForTests.mockRejectedValueOnce(new Error('DynamoDB connection failed'));
+      mockSend.mockRejectedValueOnce(new Error('DynamoDB connection failed'));
 
-      await expect(saveFeedback(mockFeedback)).rejects.toThrow('Failed to save feedback');
+      await expect(dynamoService.saveFeedback(mockFeedback)).rejects.toThrow('Failed to save feedback');
     });
 
     it('should save feedback successfully when DynamoDB connection works', async () => {
@@ -69,25 +65,25 @@ describe('DynamoDB service', () => {
       };
 
       // Mock successful DynamoDB response (PutCommand returns empty object on success)
-      mockSendForTests.mockResolvedValueOnce({});
+      mockSend.mockResolvedValueOnce({});
 
-      await expect(saveFeedback(mockFeedback)).resolves.toBeUndefined();
+      await expect(dynamoService.saveFeedback(mockFeedback)).resolves.toBeUndefined();
     });
   });
 
   describe('checkIdempotency', () => {
     it('should throw error when DynamoDB query fails', async () => {
       // Mock DynamoDB error
-      mockSendForTests.mockRejectedValueOnce(new Error('ValidationException: Table not found'));
+      mockSend.mockRejectedValueOnce(new Error('ValidationException: Table not found'));
 
-      await expect(checkIdempotency('test-key')).rejects.toThrow('Failed to check idempotency');
+      await expect(dynamoService.checkIdempotency('test-key')).rejects.toThrow('Failed to check idempotency');
     });
 
     it('should return null when no duplicate found', async () => {
-      // Mock empty query result
-      mockSendForTests.mockResolvedValueOnce({ Items: [] });
+      // Mock empty query result (QueryCommand returns { Items: [] } when no matches)
+      mockSend.mockResolvedValueOnce({ Items: [] });
 
-      const result = await checkIdempotency('test-key');
+      const result = await dynamoService.checkIdempotency('test-key');
       expect(result).toBeNull();
     });
 
@@ -102,9 +98,9 @@ describe('DynamoDB service', () => {
       };
 
       // Mock query result with existing record
-      mockSendForTests.mockResolvedValueOnce({ Items: [existingRecord] });
+      mockSend.mockResolvedValueOnce({ Items: [existingRecord] });
 
-      const result = await checkIdempotency('test-key');
+      const result = await dynamoService.checkIdempotency('test-key');
       expect(result).toEqual(existingRecord);
     });
   });
@@ -112,32 +108,32 @@ describe('DynamoDB service', () => {
   describe('updateStatistics', () => {
     it('should throw error when DynamoDB update fails', async () => {
       // Mock DynamoDB error
-      mockSendForTests.mockRejectedValueOnce(new Error('ResourceNotFoundException: Table not found'));
+      mockSend.mockRejectedValueOnce(new Error('ResourceNotFoundException: Table not found'));
 
-      await expect(updateStatistics('Good')).rejects.toThrow('Failed to update statistics');
+      await expect(dynamoService.updateStatistics('Good')).rejects.toThrow('Failed to update statistics');
     });
 
     it('should update statistics successfully when DynamoDB connection works', async () => {
       // Mock successful DynamoDB response (UpdateCommand returns empty object on success)
-      mockSendForTests.mockResolvedValueOnce({});
+      mockSend.mockResolvedValueOnce({});
 
-      await expect(updateStatistics('Good')).resolves.toBeUndefined();
+      await expect(dynamoService.updateStatistics('Good')).resolves.toBeUndefined();
     });
   });
 
   describe('getAllFeedback', () => {
     it('should throw error when DynamoDB scan fails', async () => {
       // Mock DynamoDB error
-      mockSendForTests.mockRejectedValueOnce(new Error('AccessDeniedException: Access denied'));
+      mockSend.mockRejectedValueOnce(new Error('AccessDeniedException: Access denied'));
 
-      await expect(getAllFeedback()).rejects.toThrow('Failed to get feedback');
+      await expect(dynamoService.getAllFeedback()).rejects.toThrow('Failed to get feedback');
     });
 
     it('should return empty array when no feedback exists', async () => {
-      // Mock empty scan result
-      mockSendForTests.mockResolvedValueOnce({ Items: [] });
+      // Mock empty scan result (ScanCommand returns { Items: [] } when no items)
+      mockSend.mockResolvedValueOnce({ Items: [] });
 
-      const result = await getAllFeedback();
+      const result = await dynamoService.getAllFeedback();
       expect(result).toEqual([]);
     });
 
@@ -160,9 +156,9 @@ describe('DynamoDB service', () => {
       ];
 
       // Mock scan result
-      mockSendForTests.mockResolvedValueOnce({ Items: mockFeedback });
+      mockSend.mockResolvedValueOnce({ Items: mockFeedback });
 
-      const result = await getAllFeedback();
+      const result = await dynamoService.getAllFeedback();
       
       // Should be sorted by timestamp descending (newest first)
       expect(result).toHaveLength(2);
@@ -174,16 +170,16 @@ describe('DynamoDB service', () => {
   describe('getStatistics', () => {
     it('should throw error when DynamoDB get fails', async () => {
       // Mock DynamoDB error
-      mockSendForTests.mockRejectedValueOnce(new Error('ServiceUnavailableException: Service unavailable'));
+      mockSend.mockRejectedValueOnce(new Error('ServiceUnavailableException: Service unavailable'));
 
-      await expect(getStatistics()).rejects.toThrow('Failed to get statistics');
+      await expect(dynamoService.getStatistics()).rejects.toThrow('Failed to get statistics');
     });
 
     it('should return default statistics when no record exists', async () => {
-      // Mock empty get result (GetCommand returns { Item: undefined } when no item found)
-      mockSendForTests.mockResolvedValueOnce({});
+      // Mock empty get result (GetCommand returns {} when no item found)
+      mockSend.mockResolvedValueOnce({});
 
-      const result = await getStatistics();
+      const result = await dynamoService.getStatistics();
       
       expect(result).toEqual({
         id: 'global',
@@ -206,9 +202,9 @@ describe('DynamoDB service', () => {
       };
 
       // Mock get result
-      mockSendForTests.mockResolvedValueOnce({ Item: mockStats });
+      mockSend.mockResolvedValueOnce({ Item: mockStats });
 
-      const result = await getStatistics();
+      const result = await dynamoService.getStatistics();
       expect(result).toEqual(mockStats);
     });
   });

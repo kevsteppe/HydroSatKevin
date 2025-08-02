@@ -13,6 +13,11 @@ const mockComprehendService = comprehendService as jest.Mocked<typeof comprehend
 describe('postFeedback handler', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   const createMockEvent = (body: string): APIGatewayProxyEvent => ({
