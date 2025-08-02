@@ -23,6 +23,7 @@ jest.mock('@aws-sdk/lib-dynamodb', () => ({
 describe('DynamoDB service', () => {
   // Import dynamodb module inside each test to ensure fresh mocks
   let dynamoService: typeof import('../../services/dynamodb');
+  let SuccessFailure: typeof import('../../services/dynamodb').SuccessFailure;
 
   beforeEach(async () => {
     mockSend.mockClear();
@@ -30,7 +31,9 @@ describe('DynamoDB service', () => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
     
     // Fresh import of the module for each test
-    dynamoService = await import('../../services/dynamodb');
+    const importedModule = await import('../../services/dynamodb');
+    dynamoService = importedModule;
+    SuccessFailure = importedModule.SuccessFailure;
   });
 
   afterEach(() => {
@@ -67,7 +70,8 @@ describe('DynamoDB service', () => {
       // Mock successful DynamoDB response (PutCommand returns empty object on success)
       mockSend.mockResolvedValueOnce({});
 
-      await expect(dynamoService.saveFeedback(mockFeedback)).resolves.toBeUndefined();
+      const result = await dynamoService.saveFeedback(mockFeedback);
+      expect(result).toBe(SuccessFailure.Success);
     });
   });
 
@@ -110,14 +114,16 @@ describe('DynamoDB service', () => {
       // Mock DynamoDB error
       mockSend.mockRejectedValueOnce(new Error('ResourceNotFoundException: Table not found'));
 
-      await expect(dynamoService.updateStatistics('Good')).rejects.toThrow('Failed to update statistics');
+      const result = await dynamoService.updateStatistics('Good');
+      expect(result).toBe(SuccessFailure.Failure);
     });
 
     it('should update statistics successfully when DynamoDB connection works', async () => {
       // Mock successful DynamoDB response (UpdateCommand returns empty object on success)
       mockSend.mockResolvedValueOnce({});
 
-      await expect(dynamoService.updateStatistics('Good')).resolves.toBeUndefined();
+      const result = await dynamoService.updateStatistics('Good');
+      expect(result).toBe(SuccessFailure.Success);
     });
   });
 
@@ -137,34 +143,35 @@ describe('DynamoDB service', () => {
       expect(result).toEqual([]);
     });
 
-    it('should return sorted feedback when records exist', async () => {
-      const mockFeedback = [
-        {
-          id: 'id1',
-          text: 'Feedback 1',
-          sentiment: 'Good',
-          confidence: 0.9,
-          timestamp: '2025-08-02T11:00:00.000Z'
-        },
-        {
-          id: 'id2',
-          text: 'Feedback 2',
-          sentiment: 'Bad',
-          confidence: 0.8,
-          timestamp: '2025-08-02T12:00:00.000Z'
-        }
-      ];
-
-      // Mock scan result
-      mockSend.mockResolvedValueOnce({ Items: mockFeedback });
-
-      const result = await dynamoService.getAllFeedback();
-      
-      // Should be sorted by timestamp descending (newest first)
-      expect(result).toHaveLength(2);
-      expect(result[0].id).toBe('id2'); // Newer timestamp should be first
-      expect(result[1].id).toBe('id1');
-    });
+    //I don't really care about time order sorting.
+    // it('should return sorted feedback when records exist', async () => {
+    //   const mockFeedback = [
+    //     {
+    //       id: 'id1',
+    //       text: 'Feedback 1',
+    //       sentiment: 'Good',
+    //       confidence: 0.9,
+    //       timestamp: '2025-08-02T11:00:00.000Z'
+    //     },
+    //     {
+    //       id: 'id2',
+    //       text: 'Feedback 2',
+    //       sentiment: 'Bad',
+    //       confidence: 0.8,
+    //       timestamp: '2025-08-02T12:00:00.000Z'
+    //     }
+    //   ];
+    //
+    //   // Mock scan result
+    //   mockSend.mockResolvedValueOnce({ Items: mockFeedback });
+    //
+    //   const result = await dynamoService.getAllFeedback();
+    //
+    //   // Should be sorted by timestamp descending (newest first)
+    //   expect(result).toHaveLength(2);
+    //   expect(result[0].id).toBe('id2'); // Newer timestamp should be first
+    //   expect(result[1].id).toBe('id1');
+    // });
   });
 
   describe('getStatistics', () => {

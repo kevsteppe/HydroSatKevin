@@ -3,22 +3,28 @@ import { v4 as uuidv4 } from 'uuid';
 import { createHash } from 'crypto';
 import { FeedbackRequest, FeedbackResponse, FeedbackRecord } from '../types/feedback';
 import { analyzeSentiment } from '../services/comprehend';
-import { checkIdempotency, saveFeedback, updateStatistics } from '../services/dynamodb';
+import {checkIdempotency, reverseStatistics, saveFeedback, updateStatistics} from '../services/dynamodb';
 
+
+function failResponse(statusCode: number, message : string) {
+  return {
+    statusCode: statusCode,
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Methods': 'POST',
+    },
+    body: JSON.stringify({error: message}),
+  };
+}
+
+//This should be refactored to make it easier to read
 export const postFeedback = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
     // Parse request body
     if (!event.body) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type',
-          'Access-Control-Allow-Methods': 'POST',
-        },
-        body: JSON.stringify({ error: 'Request body is required' }),
-      };
+      return failResponse(400, 'Request body is required');
     }
 
     const request: FeedbackRequest = JSON.parse(event.body);
@@ -28,29 +34,11 @@ export const postFeedback = async (event: APIGatewayProxyEvent): Promise<APIGate
 
     // Validate input
     if (!request.text || !request.sessionId) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type',
-          'Access-Control-Allow-Methods': 'POST',
-        },
-        body: JSON.stringify({ error: 'Text and sessionId are required' }),
-      };
+      return failResponse(400, 'Text and sessionId are required');
     }
 
     if (request.text.length > 1000) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type',
-          'Access-Control-Allow-Methods': 'POST',
-        },
-        body: JSON.stringify({ error: 'Text must be 1000 characters or less' }),
-      };
+      return failResponse(400, 'Text must be 1000 characters or less');
     }
 
     // Create idempotency key from session + text
@@ -95,15 +83,12 @@ export const postFeedback = async (event: APIGatewayProxyEvent): Promise<APIGate
       timestamp: new Date().toISOString(),
     };
 
+    // Update running statistics (failures are logged within the function)
+    // No need to await
+    updateStatistics(sentimentResult.sentiment);
+
     // Save feedback to DynamoDB
     await saveFeedback(feedbackRecord);
-
-    // Update running statistics (log if fails but don't fail the request)
-    try {
-      await updateStatistics(sentimentResult.sentiment);
-    } catch (error) {
-      console.log('Warning: Failed to update statistics:', error);
-    }
 
     // Prepare response
     const response: FeedbackResponse = {
@@ -127,16 +112,10 @@ export const postFeedback = async (event: APIGatewayProxyEvent): Promise<APIGate
 
   } catch (error) {
     console.error('Error processing feedback:', error);
+    //Undo statistics; this is not really atomic.  It will usually work, but not guarenteed.
+    //It's mostly to do a little code myself and illustrate the idea.
+    // reverseStatistics(sentimentResult.sentiment)
 
-    return {
-      statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'POST',
-      },
-      body: JSON.stringify({ error: 'Internal server error' }),
-    };
+    return failResponse(500, 'Internal server error');
   }
 };

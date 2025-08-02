@@ -3,11 +3,17 @@ import { DynamoDBDocumentClient, PutCommand, GetCommand, QueryCommand, UpdateCom
 import { FeedbackRecord, Statistics } from '../types/feedback';
 
 const dynamoClient = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' });
-const docClient = DynamoDBDocumentClient.from(dynamoClient);
+const ddbClient = DynamoDBDocumentClient.from(dynamoClient);
 
 const FEEDBACK_TABLE = process.env.FEEDBACK_TABLE || 'HydroSatKevin-FeedbackTable';
 const STATISTICS_TABLE = process.env.STATISTICS_TABLE || 'HydroSatKevin-StatisticsTable';
 
+export enum SuccessFailure {
+  Failure,
+  Success
+}
+
+// This is mostly blocking as it awaits the ddbClient
 export async function checkIdempotency(idempotencyKey: string): Promise<FeedbackRecord | null> {
   try {
     const command = new QueryCommand({
@@ -20,7 +26,7 @@ export async function checkIdempotency(idempotencyKey: string): Promise<Feedback
       Limit: 1,
     });
     
-    const response = await docClient.send(command);
+    const response = await ddbClient.send(command);
     
     if (response.Items && response.Items.length > 0) {
       return response.Items[0] as FeedbackRecord;
@@ -33,24 +39,35 @@ export async function checkIdempotency(idempotencyKey: string): Promise<Feedback
   }
 }
 
-export async function saveFeedback(feedback: FeedbackRecord): Promise<void> {
+// This is mostly blocking as it awaits the ddbClient
+export async function saveFeedback(feedback: FeedbackRecord): Promise<SuccessFailure> {
   try {
     const command = new PutCommand({
       TableName: FEEDBACK_TABLE,
       Item: feedback,
     });
     
-    await docClient.send(command);
+    await ddbClient.send(command);
+    return SuccessFailure.Success;
   } catch (error) {
     console.error('Error saving feedback:', error);
     throw new Error('Failed to save feedback');
   }
 }
 
-export async function updateStatistics(sentiment: 'Good' | 'Bad' | 'Neutral'): Promise<void> {
+export async function reverseStatistics(sentiment: 'Good' | 'Bad' | 'Neutral'): Promise<SuccessFailure> {
+
+  return await updateStatisticsTable(sentiment, -1);
+}
+
+export async function updateStatistics(sentiment: 'Good' | 'Bad' | 'Neutral'): Promise<SuccessFailure> {
+  return await updateStatisticsTable(sentiment, 1);
+}
+
+// This is mostly blocking as it awaits the ddbClient
+export async function updateStatisticsTable(sentiment: 'Good' | 'Bad' | 'Neutral', direction: number): Promise<SuccessFailure> {
   try {
     // Increment total count and specific sentiment count
-    const updateExpression = 'ADD totalCount :one, #sentimentCount :one SET lastUpdated = :timestamp';
     const expressionAttributeNames: { [key: string]: string } = {};
     
     switch (sentiment) {
@@ -64,22 +81,25 @@ export async function updateStatistics(sentiment: 'Good' | 'Bad' | 'Neutral'): P
         expressionAttributeNames['#sentimentCount'] = 'neutralCount';
         break;
     }
-    
+
+    const updateExpression = 'ADD totalCount :one, #sentimentCount :one SET lastUpdated = :timestamp';
+
     const command = new UpdateCommand({
       TableName: STATISTICS_TABLE,
       Key: { id: 'global' },
       UpdateExpression: updateExpression,
       ExpressionAttributeNames: expressionAttributeNames,
       ExpressionAttributeValues: {
-        ':one': 1,
+        ':one': direction,
         ':timestamp': new Date().toISOString(),
       },
     });
     
-    await docClient.send(command);
+    await ddbClient.send(command);
+    return SuccessFailure.Success;
   } catch (error) {
     console.error('Error updating statistics:', error);
-    throw new Error('Failed to update statistics');
+    return SuccessFailure.Failure;
   }
 }
 
@@ -89,12 +109,13 @@ export async function getAllFeedback(): Promise<FeedbackRecord[]> {
       TableName: FEEDBACK_TABLE,
     });
     
-    const response = await docClient.send(command);
+    const response = await ddbClient.send(command);
     
     if (response.Items) {
-      // Sort by timestamp descending (newest first)
       const items = response.Items as FeedbackRecord[];
-      return items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      return items;
+      //Sorting removed as we don't currently care about the time order
+//      return items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     }
     
     return [];
@@ -104,6 +125,7 @@ export async function getAllFeedback(): Promise<FeedbackRecord[]> {
   }
 }
 
+// This is mostly blocking as it awaits the ddbClient
 export async function getStatistics(): Promise<Statistics> {
   try {
     const command = new GetCommand({
@@ -111,7 +133,7 @@ export async function getStatistics(): Promise<Statistics> {
       Key: { id: 'global' },
     });
     
-    const response = await docClient.send(command);
+    const response = await ddbClient.send(command);
     
     if (response.Item) {
       return response.Item as Statistics;
@@ -131,3 +153,4 @@ export async function getStatistics(): Promise<Statistics> {
     throw new Error('Failed to get statistics');
   }
 }
+

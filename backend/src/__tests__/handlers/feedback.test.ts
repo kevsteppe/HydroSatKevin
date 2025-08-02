@@ -2,6 +2,7 @@ import { postFeedback } from '../../handlers/feedback';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import * as dynamoService from '../../services/dynamodb';
 import * as comprehendService from '../../services/comprehend';
+import {SuccessFailure} from "../../services/dynamodb";
 
 // Mock the services
 jest.mock('../../services/dynamodb');
@@ -16,8 +17,15 @@ describe('postFeedback handler', () => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
-  afterEach(() => {
-    jest.restoreAllMocks();
+  afterEach(async () => {
+    // need to wait for the stats to finish
+    // Wait for any pending async operations to complete
+    await new Promise(resolve => setImmediate(resolve));
+
+    // Give a small additional wait for any DynamoDB operations
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+      jest.restoreAllMocks();
   });
 
   const createMockEvent = (body: string): APIGatewayProxyEvent => ({
@@ -84,10 +92,10 @@ describe('postFeedback handler', () => {
       sentiment: 'Good',
       confidence: 0.95
     });
-    mockDynamoService.saveFeedback.mockResolvedValueOnce();
+    mockDynamoService.saveFeedback.mockResolvedValueOnce(SuccessFailure.Success);
 
     // Mock statistics update failure (should only log warning, not fail request)
-    mockDynamoService.updateStatistics.mockRejectedValueOnce(new Error('Failed to update statistics'));
+    mockDynamoService.updateStatistics.mockResolvedValueOnce(SuccessFailure.Failure);
 
     const result = await postFeedback(mockEvent);
 
@@ -144,8 +152,8 @@ describe('postFeedback handler', () => {
       sentiment: 'Good',
       confidence: 0.95
     });
-    mockDynamoService.saveFeedback.mockResolvedValueOnce();
-    mockDynamoService.updateStatistics.mockResolvedValueOnce();
+    mockDynamoService.saveFeedback.mockResolvedValueOnce(SuccessFailure.Success);
+    mockDynamoService.updateStatistics.mockResolvedValueOnce(SuccessFailure.Success);
 
     const result = await postFeedback(mockEvent);
 
