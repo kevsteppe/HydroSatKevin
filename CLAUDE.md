@@ -74,6 +74,7 @@ HydroSatKevin is a customer feedback system with sentiment analysis using AWS Co
 - [ ] Deploy frontend to S3 static hosting via CI/CD
 - [ ] Fix SAM template endpoint names - separate POST /feedback and GET /viewFeedback
 - [ ] Set up environment variables and configuration
+- [ ] Add CloudFront distribution for HTTPS support and better performance
 
 ## Development Commands
 

@@ -6,9 +6,10 @@
   "scripts": {
     "build": "tsc",
     "test": "jest",
-    "local": "cd .. && sam local start-api",
+    "local": "cd .. && FEEDBACK_TABLE=hydrosatkevin-local-feedback STATISTICS_TABLE=hydrosatkevin-local-statistics sam local start-api",
     "deploy": "sam build && sam deploy",
     "deploy-guided": "sam build && sam deploy --guided",
+    "deploy-local-db": "cd .. && sam deploy --template-file template-local.yaml --stack-name hydrosatkevin-local-db --capabilities CAPABILITY_IAM --no-confirm-changeset",
     "lint": "eslint src/**/*.ts",
     "typecheck": "tsc --noEmit"
   },
