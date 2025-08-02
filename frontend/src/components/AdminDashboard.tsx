@@ -22,44 +22,60 @@ interface FeedbackRecord {
 export const AdminDashboard: React.FC = () => {
   const [statistics, setStatistics] = useState<Statistics | null>(null);
   const [feedback, setFeedback] = useState<FeedbackRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingStats, setLoadingStats] = useState(true);
+  const [loadingFeedback, setLoadingFeedback] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedFilter, setSelectedFilter] = useState<'All' | 'Good' | 'Bad' | 'Neutral'>('All');
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchStatistics = async () => {
       try {
-        setLoading(true);
-        setError(null);
-
-        // Fetch statistics and feedback in parallel
-        const [statsResponse, feedbackResponse] = await Promise.all([
-          fetch(`${API_BASE_URL}/statistics`),
-          fetch(`${API_BASE_URL}/viewFeedback`)
-        ]);
-
+        setLoadingStats(true);
+        const statsResponse = await fetch(`${API_BASE_URL}/statistics`);
         if (!statsResponse.ok) {
           throw new Error(`Failed to fetch statistics: ${statsResponse.status}`);
+        }
+        const statsData = await statsResponse.json();
+        setStatistics(statsData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load statistics');
+        console.error('Error fetching statistics:', err);
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+
+    fetchStatistics();
+  }, []);
+
+  useEffect(() => {
+    const fetchFeedback = async () => {
+      try {
+        setLoadingFeedback(true);
+
+        let feedbackResponse;
+        if (selectedFilter === 'All') {
+          feedbackResponse = await fetch(`${API_BASE_URL}/viewFeedback`);
+        } else {
+          feedbackResponse = await fetch(`${API_BASE_URL}/viewFilteredFeedback?sentiment=${selectedFilter}`);
         }
 
         if (!feedbackResponse.ok) {
           throw new Error(`Failed to fetch feedback: ${feedbackResponse.status}`);
         }
 
-        const statsData = await statsResponse.json();
         const feedbackData = await feedbackResponse.json();
-
-        setStatistics(statsData);
         setFeedback(feedbackData);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load data');
-        console.error('Error fetching admin data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load feedback');
+        console.error('Error fetching feedback:', err);
       } finally {
-        setLoading(false);
+        setLoadingFeedback(false);
       }
     };
 
-    fetchData();
-  }, []);
+    fetchFeedback();
+  }, [selectedFilter]);
 
   const getSentimentColor = (sentiment: string) => {
     switch (sentiment) {
@@ -78,7 +94,30 @@ export const AdminDashboard: React.FC = () => {
     return `${(confidence * 100).toFixed(1)}%`;
   };
 
-  if (loading) {
+  const handleFilterChange = (filter: 'All' | 'Good' | 'Bad' | 'Neutral') => {
+    setSelectedFilter(filter);
+  };
+
+  const getCardStyle = (cardType: 'Total' | 'Good' | 'Bad' | 'Neutral', isSelected: boolean) => {
+    let backgroundColor = '#f9fafb';
+    
+    if (cardType === 'Good') backgroundColor = '#f0fdf4';
+    else if (cardType === 'Bad') backgroundColor = '#fef2f2';
+    
+    return {
+      padding: '20px',
+      border: isSelected ? '2px solid #3b82f6' : '1px solid #e5e7eb',
+      borderRadius: '8px',
+      textAlign: 'center' as const,
+      backgroundColor,
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      boxShadow: isSelected ? '0 4px 12px rgba(59, 130, 246, 0.15)' : '0 1px 3px rgba(0, 0, 0, 0.1)',
+      transform: isSelected ? 'translateY(-2px)' : 'none'
+    };
+  };
+
+  if (loadingStats) {
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
         <h1>Admin Dashboard</h1>
@@ -123,26 +162,20 @@ export const AdminDashboard: React.FC = () => {
             gap: '20px',
             marginBottom: '20px'
           }}>
-            <div style={{
-              padding: '20px',
-              border: '1px solid #e5e7eb',
-              borderRadius: '8px',
-              textAlign: 'center',
-              backgroundColor: '#f9fafb'
-            }}>
+            <div 
+              style={getCardStyle('Total', selectedFilter === 'All')}
+              onClick={() => handleFilterChange('All')}
+            >
               <h3 style={{ margin: '0 0 10px 0', fontSize: '18px' }}>Total Feedback</h3>
               <p style={{ margin: '0', fontSize: '32px', fontWeight: 'bold', color: '#1f2937' }}>
                 {statistics.totalCount}
               </p>
             </div>
             
-            <div style={{
-              padding: '20px',
-              border: '1px solid #e5e7eb',
-              borderRadius: '8px',
-              textAlign: 'center',
-              backgroundColor: '#f0fdf4'
-            }}>
+            <div 
+              style={getCardStyle('Good', selectedFilter === 'Good')}
+              onClick={() => handleFilterChange('Good')}
+            >
               <h3 style={{ margin: '0 0 10px 0', fontSize: '18px' }}>Good</h3>
               <p style={{ margin: '0', fontSize: '32px', fontWeight: 'bold', color: '#22c55e' }}>
                 {statistics.goodCount}
@@ -152,13 +185,10 @@ export const AdminDashboard: React.FC = () => {
               </p>
             </div>
             
-            <div style={{
-              padding: '20px',
-              border: '1px solid #e5e7eb',
-              borderRadius: '8px',
-              textAlign: 'center',
-              backgroundColor: '#fef2f2'
-            }}>
+            <div 
+              style={getCardStyle('Bad', selectedFilter === 'Bad')}
+              onClick={() => handleFilterChange('Bad')}
+            >
               <h3 style={{ margin: '0 0 10px 0', fontSize: '18px' }}>Bad</h3>
               <p style={{ margin: '0', fontSize: '32px', fontWeight: 'bold', color: '#ef4444' }}>
                 {statistics.badCount}
@@ -168,13 +198,10 @@ export const AdminDashboard: React.FC = () => {
               </p>
             </div>
             
-            <div style={{
-              padding: '20px',
-              border: '1px solid #e5e7eb',
-              borderRadius: '8px',
-              textAlign: 'center',
-              backgroundColor: '#f9fafb'
-            }}>
+            <div 
+              style={getCardStyle('Neutral', selectedFilter === 'Neutral')}
+              onClick={() => handleFilterChange('Neutral')}
+            >
               <h3 style={{ margin: '0 0 10px 0', fontSize: '18px' }}>Neutral</h3>
               <p style={{ margin: '0', fontSize: '32px', fontWeight: 'bold', color: '#6b7280' }}>
                 {statistics.neutralCount}
@@ -195,9 +222,11 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Feedback Section */}
       <section>
-        <h2 style={{ marginBottom: '20px' }}>All Feedback ({feedback.length})</h2>
+        <h2 style={{ marginBottom: '20px' }}>
+          {selectedFilter === 'All' ? 'All Feedback' : `${selectedFilter} Feedback`} ({feedback.length})
+        </h2>
         
-        {feedback.length === 0 ? (
+        {loadingFeedback ? (
           <div style={{
             padding: '40px',
             textAlign: 'center',
@@ -205,7 +234,21 @@ export const AdminDashboard: React.FC = () => {
             borderRadius: '8px',
             backgroundColor: '#f9fafb'
           }}>
-            <p style={{ color: '#6b7280', margin: '0' }}>No feedback submitted yet.</p>
+            <p style={{ color: '#6b7280', margin: '0' }}>Loading feedback...</p>
+          </div>
+        ) : feedback.length === 0 ? (
+          <div style={{
+            padding: '40px',
+            textAlign: 'center',
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px',
+            backgroundColor: '#f9fafb'
+          }}>
+            <p style={{ color: '#6b7280', margin: '0' }}>
+              {selectedFilter === 'All' 
+                ? 'No feedback submitted yet.' 
+                : `No ${selectedFilter.toLowerCase()} feedback found.`}
+            </p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>

@@ -48,7 +48,7 @@ describe('AdminDashboard', () => {
       }
     ];
 
-    // Mock successful API responses
+    // Mock successful API responses - statistics first, then feedback
     mockFetch
       .mockResolvedValueOnce({
         ok: true,
@@ -94,7 +94,7 @@ describe('AdminDashboard', () => {
       lastUpdated: '2025-08-02T12:00:00.000Z'
     };
 
-    // Mock successful API responses with empty feedback
+    // Mock successful API responses with empty feedback - statistics first, then feedback
     mockFetch
       .mockResolvedValueOnce({
         ok: true,
@@ -116,13 +116,9 @@ describe('AdminDashboard', () => {
   });
 
   it('should display error message when statistics API fails', async () => {
-    // Mock statistics API failure
+    // Mock statistics API failure, feedback call should not happen due to error
     mockFetch
-      .mockRejectedValueOnce(new Error('Failed to fetch statistics'))
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => [],
-      });
+      .mockRejectedValueOnce(new Error('Failed to fetch statistics'));
 
     render(<AdminDashboard />);
 
@@ -143,7 +139,7 @@ describe('AdminDashboard', () => {
       lastUpdated: '2025-08-02T12:00:00.000Z'
     };
 
-    // Mock feedback API failure
+    // Mock feedback API failure - statistics succeeds, feedback fails
     mockFetch
       .mockResolvedValueOnce({
         ok: true,
@@ -161,15 +157,11 @@ describe('AdminDashboard', () => {
   });
 
   it('should display error message when API returns error status', async () => {
-    // Mock API returning error status
+    // Mock API returning error status for statistics
     mockFetch
       .mockResolvedValueOnce({
         ok: false,
         status: 500,
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => [],
       });
 
     render(<AdminDashboard />);
