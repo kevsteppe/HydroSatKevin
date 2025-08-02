@@ -12,7 +12,7 @@ export async function checkIdempotency(idempotencyKey: string): Promise<Feedback
   try {
     const command = new QueryCommand({
       TableName: FEEDBACK_TABLE,
-      IndexName: 'IdempotencyKeyIndex',
+      IndexName: 'IdempotencyIndex',
       KeyConditionExpression: 'idempotencyKey = :key',
       ExpressionAttributeValues: {
         ':key': idempotencyKey,
