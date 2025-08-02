@@ -36,3 +36,7 @@ export interface ViewFeedbackResponse {
   confidence: number;
   timestamp: string;
 }
+
+export interface ViewFilteredFeedbackRequest {
+  sentiment: 'Good' | 'Bad' | 'Neutral';
+}

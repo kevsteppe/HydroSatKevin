@@ -103,6 +103,34 @@ export async function updateStatisticsTable(sentiment: 'Good' | 'Bad' | 'Neutral
   }
 }
 
+// Use to get all the feedbacks for a particular sentiment
+// We are still skipping pagination for this POC
+export async function getFilteredFeedback(sentiment: 'Good' | 'Bad' | 'Neutral'): Promise<FeedbackRecord[]> {
+  try {
+
+    //If we care about this usage case, we should index sentiment and shift to query
+    const command = new ScanCommand({
+      TableName: FEEDBACK_TABLE,
+      FilterExpression: 'sentiment = :sentiment',
+      ExpressionAttributeValues: {
+        ':sentiment': sentiment
+      }
+    });
+
+    const response = await ddbClient.send(command);
+
+    if (response.Items) {
+      const items = response.Items as FeedbackRecord[];
+      return items;
+    }
+
+    return [];
+  } catch (error) {
+    console.error('Error getting filtered feedback:', error);
+    throw new Error('Failed to get feedback');
+  }
+}
+
 export async function getAllFeedback(): Promise<FeedbackRecord[]> {
   try {
     const command = new ScanCommand({
@@ -117,7 +145,6 @@ export async function getAllFeedback(): Promise<FeedbackRecord[]> {
       //Sorting removed as we don't currently care about the time order
 //      return items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     }
-    
     return [];
   } catch (error) {
     console.error('Error getting all feedback:', error);
