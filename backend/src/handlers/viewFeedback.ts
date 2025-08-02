@@ -1,6 +1,7 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { ViewFeedbackResponse } from '../types/feedback';
 import { getAllFeedback } from '../services/dynamodb';
+import {createResponse} from "./feedback";
 
 export const getViewFeedback = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
@@ -16,29 +17,9 @@ export const getViewFeedback = async (event: APIGatewayProxyEvent): Promise<APIG
       timestamp: record.timestamp,
     }));
 
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'GET',
-      },
-      body: JSON.stringify(response),
-    };
-
+    return createResponse(200, response);
   } catch (error) {
     console.error('Error retrieving feedback:', error);
-
-    return {
-      statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'GET',
-      },
-      body: JSON.stringify({ error: 'Internal server error' }),
-    };
+    return createResponse(500, {error: 'Internal server error'});
   }
 };

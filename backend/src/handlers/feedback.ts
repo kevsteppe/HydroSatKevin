@@ -6,7 +6,7 @@ import { analyzeSentiment } from '../services/comprehend';
 import {checkIdempotency, reverseStatistics, saveFeedback, updateStatistics} from '../services/dynamodb';
 
 
-function createResponse(statusCode: number, message : Object) {
+export function createResponse(statusCode: number, message : Object) {
   return {
     statusCode: statusCode,
     headers: {

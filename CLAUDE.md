@@ -165,3 +165,7 @@ HydroSatKevin is a customer feedback system with sentiment analysis using AWS Co
 **API Configuration:** Production API URL properly configured and validated
 **Performance:** Optimized with non-blocking statistics updates
 **Next Priority:** Complete viewFeedback admin dashboard and implement GET /statistics endpoint
+
+## Work Items
+
+- Search feedback by sentiment to return feedback filtered by sentiment
