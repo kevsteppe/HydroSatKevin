@@ -54,11 +54,11 @@ Resources:
       CodeUri: backend/
       Handler: dist/handlers/viewFeedback.getViewFeedback
       Events:
-        GetFeedback:
+        GetViewFeedback:
           Type: Api
           Properties:
             RestApiId: !Ref FeedbackApi
-            Path: /feedback
+            Path: /viewFeedback
             Method: get
       Policies:
         - DynamoDBReadPolicy:
