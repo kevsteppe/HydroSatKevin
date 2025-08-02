@@ -33,6 +33,7 @@ HydroSatKevin is a customer feedback system with sentiment analysis using AWS Co
 - [x] Create GET /viewFeedback endpoint to retrieve all feedback
 - [x] Create GET /statistics endpoint for statistics retrieval
 - [x] Create GET /viewFilteredFeedback endpoint for sentiment filtering
+- [x] Search feedback by sentiment to return feedback filtered by sentiment
 - [x] Configure AWS SAM template for deployment
 - [x] Add input validation (1000 character limit)
 - [x] Implement error handling and logging
@@ -44,6 +45,7 @@ HydroSatKevin is a customer feedback system with sentiment analysis using AWS Co
 - [x] Implement form validation and submission
 - [x] Create viewFeedback admin dashboard component
 - [x] Add sentiment visualization/display with color-coded cards
+- [x] Add interactive filtering with clickable statistics cards
 - [x] Style components with basic CSS/styling library
 - [x] Configure API integration with backend
 
@@ -58,9 +60,9 @@ HydroSatKevin is a customer feedback system with sentiment analysis using AWS Co
 - [x] Fix DynamoDB mocking circular reference issues with fresh module imports
 - [x] Write component tests for admin dashboard (11 comprehensive test cases)
 - [x] Write unit tests for viewFeedback handlers (filtered and unfiltered)
-- [ ] Write integration tests for API endpoints
+- [NO] Write integration tests for API endpoints
 - [x] Set up Cypress for end-to-end regression tests
-- [ ] Write Cypress tests for complete user workflows
+- [NO] Write Cypress tests for complete user workflows
 
 **Infrastructure & Deployment:**
 - [x] Configure DynamoDB tables (feedback + statistics) with proper indexes
@@ -81,9 +83,9 @@ HydroSatKevin is a customer feedback system with sentiment analysis using AWS Co
 - [x] Add GET /statistics endpoint to SAM template for admin dashboard
 - [x] Add GET /viewFilteredFeedback endpoint to SAM template
 - [x] Deploy updated SAM template with statistics endpoint
-- [ ] Deploy updated SAM template with filtered feedback endpoint
-- [ ] Set up environment variables and configuration
-- [ ] Add CloudFront distribution for HTTPS support and better performance
+- [x] Deploy updated SAM template with filtered feedback endpoint
+- [NO] Set up environment variables and configuration
+- [NO] Add CloudFront distribution for HTTPS support and better performance
 
 ## Development Commands
 
@@ -119,6 +121,7 @@ HydroSatKevin is a customer feedback system with sentiment analysis using AWS Co
 
 **GET /viewFilteredFeedback**
 - Retrieve feedback filtered by sentiment (query parameter: sentiment=Good|Bad|Neutral)
+- Used by AdminDashboard interactive filtering when clicking sentiment cards
 
 ## Database Schema (DynamoDB)
 
@@ -177,16 +180,12 @@ HydroSatKevin is a customer feedback system with sentiment analysis using AWS Co
 
 ## Current Status
 
-**All Tests Passing:** 35 backend tests + 18 frontend tests (including 11 AdminDashboard tests, 7 viewFeedback tests)
+**All Tests Passing:** 
 **Production Confirmed:** Backend and frontend deployed and working with real data
 **API Configuration:** Production API URL properly configured and validated
 **Performance:** Optimized with non-blocking statistics updates
 **Admin Dashboard:** Complete with statistics cards, feedback display, comprehensive error handling
-**Next Priority:** Add CloudFront distribution for HTTPS support and enhanced performance
-
-## Work Items
-
-- Search feedback by sentiment to return feedback filtered by sentiment
+**Next Priority:** User to write README
 
 ## Development Guidelines
 
