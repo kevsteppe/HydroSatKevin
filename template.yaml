@@ -66,6 +66,22 @@ Resources:
         - DynamoDBReadPolicy:
             TableName: !Ref StatisticsTable
 
+  GetStatisticsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/
+      Handler: dist/handlers/statistics.getViewStatistics
+      Events:
+        GetStatistics:
+          Type: Api
+          Properties:
+            RestApiId: !Ref FeedbackApi
+            Path: /statistics
+            Method: get
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref StatisticsTable
+
   # DynamoDB Tables
   FeedbackTable:
     Type: AWS::DynamoDB::Table
