@@ -92,6 +92,24 @@ jobs:
         cd backend
         npm run build
     
+    - name: Check and handle stack status for idempotent deployment
+      run: |
+        STACK_STATUS=$(aws cloudformation describe-stacks --stack-name hydrosatkevin-prod --query 'Stacks[0].StackStatus' --output text --region ${{ secrets.AWS_REGION }} 2>/dev/null || echo "STACK_NOT_EXISTS")
+        echo "Current stack status: $STACK_STATUS"
+        
+        if [ "$STACK_STATUS" = "ROLLBACK_COMPLETE" ]; then
+          echo "Stack is in ROLLBACK_COMPLETE state. Deleting stack to enable redeployment..."
+          echo "Note: DynamoDB tables will be retained due to DeletionPolicy: Retain"
+          aws cloudformation delete-stack --stack-name hydrosatkevin-prod --region ${{ secrets.AWS_REGION }}
+          echo "Waiting for stack deletion to complete..."
+          aws cloudformation wait stack-delete-complete --stack-name hydrosatkevin-prod --region ${{ secrets.AWS_REGION }}
+          echo "Stack deleted successfully. Proceeding with fresh deployment..."
+        elif [ "$STACK_STATUS" = "DELETE_IN_PROGRESS" ]; then
+          echo "Stack deletion in progress. Waiting for completion..."
+          aws cloudformation wait stack-delete-complete --stack-name hydrosatkevin-prod --region ${{ secrets.AWS_REGION }}
+          echo "Stack deleted successfully"
+        fi
+
     - name: Deploy SAM application
       run: |
         sam build

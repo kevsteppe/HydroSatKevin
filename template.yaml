@@ -69,6 +69,8 @@ Resources:
   # DynamoDB Tables
   FeedbackTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub '${AWS::StackName}-feedback'
       BillingMode: PAY_PER_REQUEST
@@ -90,6 +92,8 @@ Resources:
 
   StatisticsTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub '${AWS::StackName}-statistics'
       BillingMode: PAY_PER_REQUEST

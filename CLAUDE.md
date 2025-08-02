@@ -41,14 +41,14 @@ HydroSatKevin is a customer feedback system with sentiment analysis using AWS Co
 - [x] Generate/manage session keys for idempotency
 - [x] Create customer feedback form component
 - [x] Implement form validation and submission
-- [ ] Create admin dashboard for viewing feedback
+- [ ] Create viewFeedback admin dashboard component
 - [ ] Add sentiment visualization/display
 - [x] Style components with basic CSS/styling library
 - [x] Configure API integration with backend
 
 **Testing:**
 - [x] Set up Jest testing framework for backend
-- [ ] Write unit tests for Lambda handlers
+- [ ] Write comprehensive unit tests for handlers and services
 - [ ] Write unit tests for sentiment analysis service
 - [ ] Write unit tests for DynamoDB data layer
 - [ ] Write unit tests for idempotency logic
@@ -67,6 +67,9 @@ HydroSatKevin is a customer feedback system with sentiment analysis using AWS Co
 - [x] Set up GitHub repository secrets for AWS credentials
 - [x] Create SAM deployment S3 bucket
 - [x] Create simple passing tests to unblock CI/CD deployment
+- [x] Fix frontend build issues with test files and missing HTML pages
+- [x] Fix S3 bucket policy resource reference in SAM template
+- [ ] Monitor and complete AWS deployment via CI/CD
 - [ ] Deploy backend to AWS Lambda via CI/CD
 - [ ] Deploy frontend to S3 static hosting via CI/CD
 - [ ] Fix SAM template endpoint names - separate POST /feedback and GET /viewFeedback
