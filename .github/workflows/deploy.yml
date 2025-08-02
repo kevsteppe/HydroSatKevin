@@ -131,8 +131,12 @@ jobs:
       run: |
         cd frontend
         npm ci
+        echo "Building frontend with API URL: ${{ steps.get-outputs.outputs.api-url }}"
         VITE_API_BASE_URL=${{ steps.get-outputs.outputs.api-url }} npm run build
-        echo "Built frontend with API URL: ${{ steps.get-outputs.outputs.api-url }}"
+        
+        # Validate API URL configuration with actual production URL
+        echo "Validating API URL configuration with production URL..."
+        VITE_API_BASE_URL=${{ steps.get-outputs.outputs.api-url }} npm test -- --testPathPattern=api-url.test.ts
     
     - name: Deploy frontend to S3
       run: |
