@@ -82,6 +82,22 @@ Resources:
         - DynamoDBReadPolicy:
             TableName: !Ref StatisticsTable
 
+  GetFilteredFeedbackFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/
+      Handler: dist/handlers/viewFeedback.getViewFilteredFeedback
+      Events:
+        GetFilteredFeedback:
+          Type: Api
+          Properties:
+            RestApiId: !Ref FeedbackApi
+            Path: /viewFilteredFeedback
+            Method: get
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref FeedbackTable
+
   # DynamoDB Tables
   FeedbackTable:
     Type: AWS::DynamoDB::Table
