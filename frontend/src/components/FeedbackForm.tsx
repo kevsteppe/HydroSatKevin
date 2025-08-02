@@ -3,6 +3,11 @@ import { generateSessionKey } from '../utils/session';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
+// Warn if using localhost in production
+if (API_BASE_URL === 'http://localhost:3000' && (import.meta.env.PROD || import.meta.env.MODE === 'production')) {
+  console.warn('WARNING: Using localhost API URL in production. Check VITE_API_BASE_URL configuration.');
+}
+
 interface FeedbackFormProps {
   onSuccess?: () => void;
   onError?: (error: string) => void;

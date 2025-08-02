@@ -117,26 +117,23 @@ jobs:
         sam build
         sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --stack-name hydrosatkevin-prod --s3-bucket ${{ secrets.SAM_DEPLOYMENT_BUCKET }} --capabilities CAPABILITY_IAM --region ${{ secrets.AWS_REGION }}
     
-    - name: Build frontend
+    - name: Get API Gateway URL and S3 bucket name from CloudFormation
+      id: get-outputs
+      run: |
+        API_URL=$(aws cloudformation describe-stacks --stack-name hydrosatkevin-prod --query 'Stacks[0].Outputs[?OutputKey==`FeedbackApi`].OutputValue' --output text --region ${{ secrets.AWS_REGION }})
+        BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name hydrosatkevin-prod --query 'Stacks[0].Outputs[?OutputKey==`FrontendBucket`].OutputValue' --output text --region ${{ secrets.AWS_REGION }})
+        echo "api-url=$API_URL" >> $GITHUB_OUTPUT
+        echo "bucket-name=$BUCKET_NAME" >> $GITHUB_OUTPUT
+        echo "Deployed API URL: $API_URL"
+        echo "Frontend URL: http://$BUCKET_NAME.s3-website-${{ secrets.AWS_REGION }}.amazonaws.com"
+    
+    - name: Build frontend with production API URL
       run: |
         cd frontend
         npm ci
-        npm run build
-    
-    - name: Get S3 bucket name from CloudFormation
-      id: get-bucket
-      run: |
-        BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name hydrosatkevin-prod --query 'Stacks[0].Outputs[?OutputKey==`FrontendBucket`].OutputValue' --output text --region ${{ secrets.AWS_REGION }})
-        echo "bucket-name=$BUCKET_NAME" >> $GITHUB_OUTPUT
+        VITE_API_BASE_URL=${{ steps.get-outputs.outputs.api-url }} npm run build
+        echo "Built frontend with API URL: ${{ steps.get-outputs.outputs.api-url }}"
     
     - name: Deploy frontend to S3
       run: |
-        aws s3 sync frontend/dist/ s3://${{ steps.get-bucket.outputs.bucket-name }}/ --delete
-    
-    - name: Get API Gateway URL
-      id: get-api-url
-      run: |
-        API_URL=$(aws cloudformation describe-stacks --stack-name hydrosatkevin-prod --query 'Stacks[0].Outputs[?OutputKey==`FeedbackApi`].OutputValue' --output text --region ${{ secrets.AWS_REGION }})
-        echo "api-url=$API_URL" >> $GITHUB_OUTPUT
-        echo "Deployed API URL: $API_URL"
-        echo "Frontend URL: http://${{ steps.get-bucket.outputs.bucket-name }}.s3-website-${{ secrets.AWS_REGION }}.amazonaws.com"
+        aws s3 sync frontend/dist/ s3://${{ steps.get-outputs.outputs.bucket-name }}/ --delete
