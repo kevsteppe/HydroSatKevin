@@ -6,7 +6,7 @@ import { analyzeSentiment } from '../services/comprehend';
 import {checkIdempotency, reverseStatistics, saveFeedback, updateStatistics} from '../services/dynamodb';
 
 
-function failResponse(statusCode: number, message : string) {
+function createResponse(statusCode: number, message : Object) {
   return {
     statusCode: statusCode,
     headers: {
@@ -15,16 +15,21 @@ function failResponse(statusCode: number, message : string) {
       'Access-Control-Allow-Headers': 'Content-Type',
       'Access-Control-Allow-Methods': 'POST',
     },
-    body: JSON.stringify({error: message}),
+    body: JSON.stringify(message),
   };
 }
 
 //This should be refactored to make it easier to read
 export const postFeedback = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+
+  // Declare variables that need to be shared between try blocks
+  let sentimentResult: any;
+  let feedbackRecord: FeedbackRecord;
+
   try {
     // Parse request body
     if (!event.body) {
-      return failResponse(400, 'Request body is required');
+      return createResponse(400, {error: 'Request body is required'});
     }
 
     const request: FeedbackRequest = JSON.parse(event.body);
@@ -34,11 +39,11 @@ export const postFeedback = async (event: APIGatewayProxyEvent): Promise<APIGate
 
     // Validate input
     if (!request.text || !request.sessionId) {
-      return failResponse(400, 'Text and sessionId are required');
+      return createResponse(400, {error: 'Text and sessionId are required'});
     }
 
     if (request.text.length > 1000) {
-      return failResponse(400, 'Text must be 1000 characters or less');
+      return createResponse(400, {error: 'Text must be 1000 characters or less'});
     }
 
     // Create idempotency key from session + text
@@ -58,23 +63,15 @@ export const postFeedback = async (event: APIGatewayProxyEvent): Promise<APIGate
         timestamp: existingFeedback.timestamp,
       };
 
-      return {
-        statusCode: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type',
-          'Access-Control-Allow-Methods': 'POST',
-        },
-        body: JSON.stringify(response),
-      };
+      return createResponse(200, response);
     }
 
+
     // Analyze sentiment with AWS Comprehend
-    const sentimentResult = await analyzeSentiment(request.text);
+    sentimentResult = await analyzeSentiment(request.text);
 
     // Create feedback record
-    const feedbackRecord: FeedbackRecord = {
+    feedbackRecord = {
       id: uuidv4(),
       idempotencyKey,
       text: request.text,
@@ -87,6 +84,12 @@ export const postFeedback = async (event: APIGatewayProxyEvent): Promise<APIGate
     // No need to await
     updateStatistics(sentimentResult.sentiment);
 
+  } catch (error) {
+    console.error('Error processing feedback:', error);
+    return createResponse(500, {error: 'Internal server error'});
+  }
+
+  try {
     // Save feedback to DynamoDB
     await saveFeedback(feedbackRecord);
 
@@ -99,23 +102,14 @@ export const postFeedback = async (event: APIGatewayProxyEvent): Promise<APIGate
       timestamp: feedbackRecord.timestamp,
     };
 
-    return {
-      statusCode: 201,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'POST',
-      },
-      body: JSON.stringify(response),
-    };
+    return createResponse(201, response);
 
   } catch (error) {
     console.error('Error processing feedback:', error);
     //Undo statistics; this is not really atomic.  It will usually work, but not guarenteed.
     //It's mostly to do a little code myself and illustrate the idea.
-    // reverseStatistics(sentimentResult.sentiment)
+    reverseStatistics(sentimentResult.sentiment)
 
-    return failResponse(500, 'Internal server error');
+    return createResponse(500, {error: 'Internal server error'});
   }
 };
