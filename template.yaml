@@ -104,6 +104,7 @@ Resources:
         - AttributeName: id
           KeyType: HASH
 
+  # Future S3 buckets for data will need a retention policy
   # S3 Bucket for Frontend
   FrontendBucket:
     Type: AWS::S3::Bucket
@@ -135,6 +136,12 @@ Outputs:
     Value: !Sub 'https://${FeedbackApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/'
     Export:
       Name: !Sub '${AWS::StackName}-api-url'
+
+  FrontendBucket:
+    Description: S3 Bucket name for Frontend
+    Value: !Ref FrontendBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-frontend-bucket'
 
   FrontendURL:
     Description: S3 Website URL for Frontend

@@ -1,3 +1,5 @@
+# We will try to maintain an idempotent deployment policy.  That means that regardless of the state of the deployment
+# running these actions should result in a completed deployment.
 name: Deploy to AWS
 
 on:
