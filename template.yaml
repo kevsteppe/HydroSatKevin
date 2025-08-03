@@ -5,7 +5,7 @@ Description: Customer Feedback System with Sentiment Analysis
 Globals:
   Function:
     Timeout: 30
-    Runtime: nodejs24.x
+    Runtime: nodejs18.x
     Architectures:
       - x86_64
     Environment:
