@@ -66,7 +66,6 @@ export const postFeedback = async (event: APIGatewayProxyEvent): Promise<APIGate
       return createResponse(200, response);
     }
 
-
     // Analyze sentiment with AWS Comprehend
     sentimentResult = await analyzeSentiment(request.text);
 
@@ -107,7 +106,6 @@ export const postFeedback = async (event: APIGatewayProxyEvent): Promise<APIGate
   } catch (error) {
     console.error('Error processing feedback:', error);
     //Undo statistics; this is not really atomic.  It will usually work, but not guarenteed.
-    //It's mostly to do a little code myself and illustrate the idea.
     reverseStatistics(sentimentResult.sentiment)
 
     return createResponse(500, {error: 'Internal server error'});
